@@ -12,8 +12,7 @@ export default async () => {
 function Extension() {
   const { data } = shopify;
   const orderGid = data.selected?.[0]?.id ?? null;
-  // TODO: use orderGid once Shopify order IDs are linked to DB
-  const orderId = '766995939';
+  const orderId = orderGid ? orderGid.split('/').pop() : null;
 
   const [items, setItems] = useState([]);
   const [events, setEvents] = useState([]);
