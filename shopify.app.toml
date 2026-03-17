@@ -1,0 +1,23 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "d2922a99be8c4ac800ca4f9c581dc08b"
+name = "PODHero - Item History"
+application_url = "https://localhost:3000"
+embedded = true
+
+[webhooks]
+api_version = "2025-04"
+
+[access_scopes]
+scopes = "read_orders"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ "https://localhost:3000/auth/callback" ]
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true

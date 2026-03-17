@@ -1,0 +1,5 @@
+[commands]
+dev = "node index.js"
+
+[roles]
+backend = true

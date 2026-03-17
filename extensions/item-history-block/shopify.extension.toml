@@ -1,0 +1,14 @@
+api_version = "2025-10"
+
+[[extensions]]
+uid = "f67eaca2-a9dc-f0ce-2356-11fb210ee47058b5d402"
+type = "ui_extension"
+name = "Item History"
+handle = "item-history-block"
+
+[[extensions.targeting]]
+target = "admin.order-details.block.render"
+module = "./src/BlockExtension.jsx"
+
+[extensions.capabilities]
+network_access = true
