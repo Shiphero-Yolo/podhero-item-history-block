@@ -1,11 +1,23 @@
 /**
- * Fetch order history from the app backend, which queries Supabase.
- * fetch() to relative paths is automatically authenticated by Shopify.
+ * Fetch helpers that call Supabase Edge Functions instead of the Express backend.
+ *
+ * FUNCTIONS_BASE must match your deployed Supabase project.
+ * Session token is retrieved from Shopify's `shopify.idToken()` and sent as
+ * a Bearer token so the edge functions can verify it.
  */
-export async function fetchOrderHistory(orderId) {
-  const res = await fetch(
-    `/api/order-history?order_id=${encodeURIComponent(orderId)}`,
-  );
+
+const FUNCTIONS_BASE = 'https://sewingparts-podhero.supabase.co/functions/v1';
+
+async function authedFetch(path, options = {}) {
+  const token = await shopify.idToken();
+  const res = await fetch(`${FUNCTIONS_BASE}${path}`, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Backend error ${res.status}: ${text}`);
@@ -13,15 +25,13 @@ export async function fetchOrderHistory(orderId) {
   return res.json();
 }
 
+export async function fetchOrderHistory(orderId) {
+  return authedFetch(`/order-history?order_id=${encodeURIComponent(orderId)}`);
+}
+
 export async function reshipItem(itemId) {
-  const res = await fetch('/api/reship', {
+  return authedFetch('/reship', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ item_id: itemId }),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Reship failed ${res.status}: ${text}`);
-  }
-  return res.json();
 }
