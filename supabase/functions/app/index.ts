@@ -1,0 +1,153 @@
+// supabase/functions/app/index.ts
+//
+// Serves the embedded "app home" page that Shopify Admin loads in an iframe
+// when the merchant clicks the app from the Apps menu. There is no backend
+// behind this — the actual functionality lives in the order-details extension.
+//
+// Allowed to be framed only by Shopify Admin and any *.myshopify.com origin.
+
+const HTML = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PODHero · Item History</title>
+<style>
+  :root {
+    --purple: #5B2C91;
+    --coral: #FF4D6D;
+    --yellow: #FFD93D;
+    --navy: #1B1B3A;
+    --gray-bg: #F4F4F8;
+    --gray-text: #5C5C7A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    background: var(--gray-bg);
+    color: var(--navy);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 24px 64px; }
+  .hero {
+    background: var(--purple); color: #fff;
+    padding: 32px; border-radius: 14px;
+    position: relative; overflow: hidden;
+  }
+  .hero::after {
+    content: ""; position: absolute; right: -40px; top: -40px;
+    width: 140px; height: 140px; border-radius: 50%;
+    background: var(--yellow); opacity: 0.9;
+  }
+  .hero::before {
+    content: ""; position: absolute; left: -10%; bottom: -30px;
+    width: 120%; height: 30px; transform: rotate(-3deg);
+    background: var(--coral);
+  }
+  .badge {
+    display: inline-block; background: var(--yellow); color: var(--purple);
+    padding: 6px 14px; border-radius: 8px;
+    font-weight: 700; font-size: 14px; letter-spacing: 0.3px;
+    margin-bottom: 18px; position: relative; z-index: 1;
+  }
+  h1 { margin: 0 0 6px; font-size: 30px; line-height: 1.15; position: relative; z-index: 1; }
+  .tagline { color: var(--yellow); margin: 0; font-size: 16px; position: relative; z-index: 1; }
+
+  .card {
+    background: #fff; padding: 24px 28px; border-radius: 12px;
+    margin-top: 18px; border-left: 4px solid var(--coral);
+    box-shadow: 0 1px 2px rgba(27,27,58,0.04);
+  }
+  .card.tip { border-left-color: var(--purple); background: #FFF8DC; }
+  .card h2 { margin: 0 0 8px; color: var(--purple); font-size: 18px; }
+  .card p { margin: 0 0 8px; line-height: 1.55; }
+  .card p:last-child { margin-bottom: 0; }
+  .muted { color: var(--gray-text); font-size: 14px; }
+
+  .pipeline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 18px 0 4px; }
+  .stage {
+    background: var(--purple); color: #fff;
+    padding: 7px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .arrow { color: var(--purple); font-size: 18px; line-height: 1; }
+
+  .steps { padding-left: 0; list-style: none; counter-reset: step; }
+  .steps li {
+    counter-increment: step;
+    position: relative; padding: 4px 0 4px 36px;
+    line-height: 1.5;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 4px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--purple); color: #fff;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  footer { color: var(--gray-text); font-size: 12px; margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <span class="badge">PODHero</span>
+      <h1>Item History</h1>
+      <p class="tagline">Track every order. Every step. Every time.</p>
+    </div>
+
+    <div class="card">
+      <h2>You're all set.</h2>
+      <p>The Item History block has been added to your store's order detail pages — there's nothing to configure here.</p>
+      <p class="muted">Open any order from <strong>Orders</strong> in the sidebar and scroll down to see the full lifecycle for every item on that order.</p>
+    </div>
+
+    <div class="card">
+      <h2>What you'll see</h2>
+      <div class="pipeline">
+        <span class="stage">New</span><span class="arrow">›</span>
+        <span class="stage">Batched</span><span class="arrow">›</span>
+        <span class="stage">Treated</span><span class="arrow">›</span>
+        <span class="stage">Decorated</span><span class="arrow">›</span>
+        <span class="stage">QC Pass</span><span class="arrow">›</span>
+        <span class="stage">Binned</span><span class="arrow">›</span>
+        <span class="stage">Shipped</span>
+      </div>
+      <p class="muted">Each step shows the date and time it was reached. Errors (QC Fail, API Fail, Inventory Fail, Cancelled) appear as a red branch off the timeline.</p>
+    </div>
+
+    <div class="card">
+      <h2>How to use it</h2>
+      <ol class="steps">
+        <li>Go to <strong>Orders</strong> and open any order.</li>
+        <li>Scroll down to the <strong>Item History</strong> section.</li>
+        <li>Click <strong>Re-ship</strong> on any item that needs to be made again.</li>
+      </ol>
+    </div>
+
+    <div class="card tip">
+      <h2>Need a hand?</h2>
+      <p>Reach out to your PODHero point of contact with the Shopify order number — that's the fastest way to get help.</p>
+    </div>
+
+    <footer>© PODHero · Item History v1</footer>
+  </div>
+</body>
+</html>`;
+
+const HEADERS: Record<string, string> = {
+  "Content-Type": "text/html; charset=utf-8",
+  // Allow Shopify Admin to frame us, block everyone else.
+  "Content-Security-Policy":
+    "frame-ancestors https://*.myshopify.com https://admin.shopify.com;",
+  "X-Content-Type-Options": "nosniff",
+  "Cache-Control": "public, max-age=300",
+};
+
+Deno.serve((_req: Request) => {
+  return new Response(HTML, { status: 200, headers: HEADERS });
+});
