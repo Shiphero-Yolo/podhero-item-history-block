@@ -3,3 +3,5 @@ node_modules/
 dist/
 .shopify/
 supabase/.temp/
+.DS_Store
+.vercel/
