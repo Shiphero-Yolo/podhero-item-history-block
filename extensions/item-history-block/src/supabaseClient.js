@@ -2,14 +2,14 @@
  * Fetch helpers that call Supabase Edge Functions instead of the Express backend.
  *
  * FUNCTIONS_BASE must match your deployed Supabase project.
- * Session token is retrieved from Shopify's `shopify.idToken()` and sent as
- * a Bearer token so the edge functions can verify it.
+ * Session token is retrieved from Shopify's `shopify.auth.idToken()` and sent
+ * as a Bearer token so the edge functions can verify it.
  */
 
-const FUNCTIONS_BASE = 'https://sewingparts-podhero.supabase.co/functions/v1';
+const FUNCTIONS_BASE = 'https://qcjiezsjuhpsxcyiduaf.supabase.co/functions/v1';
 
 async function authedFetch(path, options = {}) {
-  const token = await shopify.idToken();
+  const token = await shopify.auth.idToken();
   const res = await fetch(`${FUNCTIONS_BASE}${path}`, {
     ...options,
     headers: {
