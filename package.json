@@ -11,9 +11,6 @@
   "dependencies": {
     "@preact/signals": "^2.8.2",
     "@shopify/ui-extensions": "^2026.1.1",
-    "@supabase/supabase-js": "^2.99.2",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.2",
     "preact": "^10.29.0"
   }
 }
