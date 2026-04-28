@@ -1,50 +1,50 @@
 // supabase/functions/order-history/index.ts
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { handleCors } from '../_shared/cors.ts';
 import { verifySessionToken } from '../_shared/auth.ts';
+import { getAccountIdForShop } from '../_shared/account.ts';
 import { createAdminClient } from '../_shared/supabase.ts';
+import { internalError, jsonResponse } from '../_shared/http.ts';
 
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
-  const headers = { ...corsHeaders(req), 'Content-Type': 'application/json' };
+  const auth = await verifySessionToken(req);
+  if (!auth.ok) return jsonResponse(req, auth.status, { error: auth.error });
 
-  const authError = await verifySessionToken(req);
-  if (authError) return authError;
+  const accountId = await getAccountIdForShop(auth.shopDomain);
+  if (!accountId) {
+    console.warn(`unprovisioned shop tried to access order-history: ${auth.shopDomain}`);
+    return jsonResponse(req, 403, { error: 'shop_not_provisioned' });
+  }
 
   const url = new URL(req.url);
   const orderId = url.searchParams.get('order_id');
-
   if (!orderId || !/^\d+$/.test(orderId)) {
-    return new Response(
-      JSON.stringify({ error: 'order_id must be a positive integer' }),
-      { status: 400, headers },
-    );
+    return jsonResponse(req, 400, { error: 'order_id must be a positive integer' });
   }
 
   try {
     const supabase = createAdminClient();
-
     const [itemsRes, eventsRes] = await Promise.all([
-      supabase.from('order_items').select('*').eq('order_id', orderId),
+      supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId)
+        .eq('account_id', accountId),
       supabase
         .from('order_events')
         .select('*')
         .eq('order_id', orderId)
+        .eq('account_id', accountId)
         .order('timestamp', { ascending: true }),
     ]);
 
     if (itemsRes.error) throw itemsRes.error;
     if (eventsRes.error) throw eventsRes.error;
 
-    return new Response(
-      JSON.stringify({ items: itemsRes.data, events: eventsRes.data }),
-      { status: 200, headers },
-    );
+    return jsonResponse(req, 200, { items: itemsRes.data, events: eventsRes.data });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: (err as Error).message }),
-      { status: 500, headers },
-    );
+    return internalError(req, 'order-history', err);
   }
 });

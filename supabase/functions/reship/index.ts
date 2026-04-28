@@ -1,78 +1,54 @@
 // supabase/functions/reship/index.ts
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { handleCors } from '../_shared/cors.ts';
 import { verifySessionToken } from '../_shared/auth.ts';
+import { getAccountIdForShop } from '../_shared/account.ts';
 import { createAdminClient } from '../_shared/supabase.ts';
+import { internalError, jsonResponse } from '../_shared/http.ts';
 
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
-  const headers = { ...corsHeaders(req), 'Content-Type': 'application/json' };
+  const auth = await verifySessionToken(req);
+  if (!auth.ok) return jsonResponse(req, auth.status, { error: auth.error });
 
-  const authError = await verifySessionToken(req);
-  if (authError) return authError;
+  const accountId = await getAccountIdForShop(auth.shopDomain);
+  if (!accountId) {
+    console.warn(`unprovisioned shop tried to reship: ${auth.shopDomain}`);
+    return jsonResponse(req, 403, { error: 'shop_not_provisioned' });
+  }
 
   let body: { item_id?: string };
   try {
     body = await req.json();
   } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers },
-    );
+    return jsonResponse(req, 400, { error: 'invalid_json' });
   }
 
-  const { item_id } = body;
-  if (!item_id || typeof item_id !== 'string' || item_id.trim() === '') {
-    return new Response(
-      JSON.stringify({ error: 'item_id is required' }),
-      { status: 400, headers },
-    );
+  const itemId = body.item_id;
+  if (!itemId || typeof itemId !== 'string' || itemId.trim() === '') {
+    return jsonResponse(req, 400, { error: 'item_id is required' });
   }
 
   try {
     const supabase = createAdminClient();
-
-    // Look up the item to confirm it exists
-    const { data: item, error: lookupErr } = await supabase
-      .from('order_items')
-      .select('id, order_id, status')
-      .eq('id', item_id)
-      .single();
-
-    if (lookupErr || !item) {
-      return new Response(
-        JSON.stringify({ error: 'Item not found' }),
-        { status: 404, headers },
-      );
-    }
-
-    // Reset item status back to "new"
-    const { error: updateErr } = await supabase
-      .from('order_items')
-      .update({ status: 'new' })
-      .eq('id', item_id);
-
-    if (updateErr) throw updateErr;
-
-    // Log a reship event
-    const { error: eventErr } = await supabase.from('order_events').insert({
-      order_id: item.order_id,
-      order_item: item.id,
-      event: 'reship',
-      timestamp: new Date().toISOString(),
+    const { data, error } = await supabase.rpc('reship_order_item', {
+      p_item_id: itemId,
+      p_account_id: accountId,
     });
 
-    if (eventErr) throw eventErr;
+    if (error) throw error;
 
-    return new Response(
-      JSON.stringify({ success: true, item_id, previous_status: item.status }),
-      { status: 200, headers },
-    );
+    const result = data as
+      | { success: true; item_id: string; previous_status: string | null }
+      | { success: false; error: string };
+
+    if (!result.success) {
+      return jsonResponse(req, 404, { error: 'item_not_found' });
+    }
+
+    return jsonResponse(req, 200, result);
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: (err as Error).message }),
-      { status: 500, headers },
-    );
+    return internalError(req, 'reship', err);
   }
 });
