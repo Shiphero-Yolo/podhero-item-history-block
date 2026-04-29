@@ -15,13 +15,15 @@ export default function ItemRow({
   const startsOpen = ERROR_STATUSES.has(item.status);
 
   function handleReshipClick(e) {
-    // Prevent the click from toggling the s-details disclosure.
-    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    // s-details toggles on click bubbling up from the summary; stop both
+    // the bubble and the default toggle so the disclosure state stays put.
+    e.stopPropagation();
+    e.preventDefault();
     onReship(item.id);
   }
 
   return (
-    <s-details defaultOpen={startsOpen}>
+    <s-details defaultOpen={startsOpen || undefined}>
       <s-summary>
         <s-stack
           direction="inline"
