@@ -2,6 +2,7 @@
 
 const ALLOWED_ORIGINS = new Set([
   'https://admin.shopify.com',
+  'https://extensions.shopifycdn.com',
 ]);
 
 function isAllowedOrigin(origin: string | null): boolean {
@@ -20,6 +21,7 @@ export function corsHeaders(req: Request): Record<string, string> {
   const headers: Record<string, string> = {
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Vary': 'Origin',
     'X-Content-Type-Options': 'nosniff',
   };
   if (isAllowedOrigin(origin)) {

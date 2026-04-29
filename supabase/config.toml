@@ -337,6 +337,21 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# These functions authenticate callers themselves (Shopify session tokens for
+# the data endpoints; iframe-only HTML for `app`), so the Supabase gateway must
+# not try to verify the Authorization header as a Supabase-issued JWT.
+[functions.app]
+verify_jwt = false
+
+[functions.order-history]
+verify_jwt = false
+
+[functions.reship]
+verify_jwt = false
+
+[functions.statuses]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
