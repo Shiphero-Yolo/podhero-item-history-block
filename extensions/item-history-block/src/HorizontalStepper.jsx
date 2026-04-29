@@ -1,9 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from 'preact';
-
-const HAPPY_PATH = ['new', 'batched', 'treated', 'decorated', 'qc_pass', 'binned', 'shipped'];
-const ERROR_STATUSES = new Set(['qc_fail', 'api_fail', 'inventory_fail', 'cancelled']);
+import { HAPPY_PATH, ERROR_STATUSES, formatLabel } from './statusBadge.js';
 
 const STATUS_ICONS = {
   new: 'clock',
@@ -18,10 +16,6 @@ const STATUS_ICONS = {
   inventory_fail: 'alert-triangle',
   cancelled: 'disabled',
 };
-
-function formatLabel(status) {
-  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function formatTimestamp(ts) {
   if (!ts) return { date: '\u2014', time: '' };
