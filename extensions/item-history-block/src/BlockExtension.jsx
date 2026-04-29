@@ -3,7 +3,8 @@
 import { h, render } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { fetchOrderHistory, reshipItem } from './supabaseClient';
-import HorizontalStepper from './HorizontalStepper.jsx';
+import ItemRow from './ItemRow.jsx';
+import { ERROR_STATUSES } from './statusBadge.js';
 
 export default async () => {
   render(<Extension />, document.body);
@@ -79,7 +80,6 @@ function Extension() {
     );
   }
 
-  // Build item → events map (only item-level events)
   const itemEventMap = {};
   events
     .filter((e) => e.order_item)
@@ -88,33 +88,25 @@ function Extension() {
       itemEventMap[e.order_item].push(e);
     });
 
+  const totalCount = items.length;
+  const errorCount = items.filter((i) => ERROR_STATUSES.has(i.status)).length;
+  const shippedCount = items.filter((i) => i.status === 'shipped').length;
+  const headerText = `${totalCount} items · ${errorCount} in error · ${shippedCount} shipped`;
+
   return (
     <s-admin-block title="Item History">
       <s-stack direction="block" gap="base">
-        {items.map((item, idx) => {
-          const itemEvents = itemEventMap[item.id] || [];
-
-          return (
-            <s-stack direction="block" gap="small" key={item.id}>
-              {idx > 0 && <s-divider />}
-              <s-heading>{item.product_name}</s-heading>
-              <s-text color="subdued">
-                SKU: {item.sku || '—'} × {item.quantity}
-              </s-text>
-              <HorizontalStepper currentStatus={item.status} events={itemEvents} />
-              <s-stack direction="inline" justifyContent="end">
-                <s-button
-                  variant="secondary"
-                  disabled={reshipDone[item.id]}
-                  loading={reshipLoading[item.id]}
-                  onClick={() => handleReship(item.id)}
-                >
-                  {reshipDone[item.id] ? 'Re-ship requested' : 'Re-ship'}
-                </s-button>
-              </s-stack>
-            </s-stack>
-          );
-        })}
+        <s-text color="subdued">{headerText}</s-text>
+        {items.map((item) => (
+          <ItemRow
+            key={item.id}
+            item={item}
+            events={itemEventMap[item.id] || []}
+            reshipLoading={!!reshipLoading[item.id]}
+            reshipDone={!!reshipDone[item.id]}
+            onReship={handleReship}
+          />
+        ))}
       </s-stack>
     </s-admin-block>
   );
