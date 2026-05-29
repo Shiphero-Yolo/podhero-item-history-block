@@ -25,8 +25,8 @@ async function authedFetch(path, options = {}) {
   return res.json();
 }
 
-export async function fetchOrderHistory(orderId) {
-  return authedFetch(`/order-history?order_id=${encodeURIComponent(orderId)}`);
+export async function fetchOrderHistory(orderNumber) {
+  return authedFetch(`/order-history?order_number=${encodeURIComponent(orderNumber)}`);
 }
 
 export async function reshipItem(itemId) {

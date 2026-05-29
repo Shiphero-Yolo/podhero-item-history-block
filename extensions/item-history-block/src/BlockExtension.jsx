@@ -6,6 +6,35 @@ import { fetchOrderHistory, reshipItem, cancelItem } from './supabaseClient';
 import ItemRow from './ItemRow.jsx';
 import { ERROR_STATUSES } from './statusBadge.js';
 
+// Surfaced as a small badge so we can tell which build a merchant is running
+// when debugging in the admin. Bump on each release.
+const VERSION = 'v1.3.0';
+
+// DEV showcase override. The pod-hero-app dev store's own orders don't exist in
+// PODHero's data, so a live lookup there renders "No history found". Set this to
+// a real PODHero order_number (e.g. '32163704' — order_id 805210884, account
+// sewingpartsonline, 5 line items spanning shipped/cancelled/backordered) to
+// force that order to render from any dev-store order page. Leave '' in
+// production so the block uses the actually-selected order. Remove before GA.
+const DEV_ORDER_NUMBER_OVERRIDE = '';
+
+// Resolves a Shopify order GID to its human order number (the order *name*,
+// e.g. "#32163704" -> "32163704") — the key PODHero stores order history under.
+async function fetchOrderName(orderGid) {
+  const res = await fetch('shopify:admin/api/graphql.json', {
+    method: 'POST',
+    body: JSON.stringify({
+      query: 'query($id: ID!) { order(id: $id) { name } }',
+      variables: { id: orderGid },
+    }),
+  });
+  if (!res.ok) throw new Error(`Shopify GraphQL ${res.status}`);
+  const json = await res.json();
+  const name = json?.data?.order?.name;
+  if (!name) throw new Error('Order name not found');
+  return name.replace(/^#/, '').trim();
+}
+
 export default async () => {
   render(<Extension />, document.body);
 };
@@ -13,13 +42,8 @@ export default async () => {
 function Extension() {
   const { data } = shopify;
   const orderGid = data.selected?.[0]?.id ?? null;
-  // DEV: hardcoded to a real sewingparts-podhero order so the block can be
-  // exercised from any order page in the pod-hero-app dev store. Order 805210884
-  // (account sewingpartsonline.myshopify.com) has 5 line items spanning shipped,
-  // cancelled, and backordered — it exercises the happy path, the error branch,
-  // and a neutral status in one view. Restore `orderGid.split('/').pop()` before ship.
-  const orderId = '805210884';
 
+  const [orderNumber, setOrderNumber] = useState(DEV_ORDER_NUMBER_OVERRIDE);
   const [items, setItems] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +79,7 @@ function Extension() {
   }
 
   useEffect(() => {
-    if (!orderId) {
+    if (!orderGid && !DEV_ORDER_NUMBER_OVERRIDE) {
       setLoading(false);
       setError('No order selected.');
       return;
@@ -63,7 +87,11 @@ function Extension() {
 
     async function fetchData() {
       try {
-        const { items: itemsData, events: eventsData } = await fetchOrderHistory(orderId);
+        // The dev override (when set) wins so the showcase order renders from any
+        // dev-store order page; otherwise resolve the selected order's number.
+        const number = DEV_ORDER_NUMBER_OVERRIDE || (await fetchOrderName(orderGid));
+        setOrderNumber(number);
+        const { items: itemsData, events: eventsData } = await fetchOrderHistory(number);
         setItems(itemsData);
         setEvents(eventsData);
       } catch (err) {
@@ -74,7 +102,7 @@ function Extension() {
     }
 
     fetchData();
-  }, [orderId]);
+  }, [orderGid]);
 
   if (loading) {
     return (
@@ -116,7 +144,25 @@ function Extension() {
   return (
     <s-admin-block title="Item History">
       <s-stack direction="block" gap="base">
-        <s-text color="subdued">{headerText}</s-text>
+        <s-stack
+          direction="inline"
+          gap="small"
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <s-text color="subdued">{headerText}</s-text>
+          <s-stack direction="inline" gap="small" alignItems="center">
+            {orderNumber && (
+              <s-link
+                href={`shopify:admin/apps/podhero-item-history?order_number=${orderNumber}`}
+                tone="primary"
+              >
+                Open full history
+              </s-link>
+            )}
+            <s-text color="subdued">{VERSION}</s-text>
+          </s-stack>
+        </s-stack>
         {items.map((item) => (
           <ItemRow
             key={item.id}
