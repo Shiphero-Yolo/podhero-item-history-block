@@ -10,6 +10,9 @@ export default function ItemRow({
   reshipLoading,
   reshipDone,
   onReship,
+  cancelLoading,
+  cancelDone,
+  onCancel,
 }) {
   const { label, tone } = statusBadge(item.status);
   const startsOpen = ERROR_STATUSES.has(item.status);
@@ -20,6 +23,12 @@ export default function ItemRow({
     e.stopPropagation();
     e.preventDefault();
     onReship(item.id);
+  }
+
+  function handleCancelClick(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    onCancel(item.id);
   }
 
   return (
@@ -47,11 +56,20 @@ export default function ItemRow({
             >
               {reshipDone ? 'Re-ship requested' : 'Re-ship'}
             </s-button>
+            <s-button
+              variant="secondary"
+              tone="critical"
+              disabled={cancelDone}
+              loading={cancelLoading}
+              onClick={handleCancelClick}
+            >
+              {cancelDone ? 'Cancellation requested' : 'Cancel'}
+            </s-button>
           </s-stack>
         </s-stack>
       </s-summary>
       <s-box paddingBlockStart="base">
-        <HorizontalStepper currentStatus={item.status} events={events} />
+        <HorizontalStepper currentStatus={item.status} events={events} createdAt={item.created_at} stepTimestamps={item.step_timestamps} />
       </s-box>
     </s-details>
   );

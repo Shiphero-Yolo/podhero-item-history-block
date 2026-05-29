@@ -349,6 +349,9 @@ verify_jwt = false
 [functions.reship]
 verify_jwt = false
 
+[functions.cancel]
+verify_jwt = false
+
 [functions.statuses]
 verify_jwt = false
 
