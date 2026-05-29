@@ -125,6 +125,13 @@ const STYLE = `
   .node.error .slabel { color: var(--coral); }
   .stime { font-size: 11px; color: var(--gray-text); margin-top: 2px; line-height: 1.3; }
 
+  .item-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--navy); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn:hover:not(:disabled) { background: #F7F7FB; }
+  .btn:disabled { opacity: 0.55; cursor: default; }
+  .btn.critical { color: #B3123A; border-color: #F3C4CF; }
+  .btn.critical:hover:not(:disabled) { background: #FDF0F3; }
+
   .evlog { margin-top: 14px; }
   .evlog summary { cursor: pointer; color: var(--purple); font-size: 13px; font-weight: 600; }
   .evlog ul { list-style: none; padding-left: 0; margin: 8px 0 0; }
@@ -244,9 +251,11 @@ const CLIENT_JS = `
     var status = item.status;
     var isError = !!ERROR_STATUSES[status];
     var activeIndex = HAPPY_PATH.indexOf(status);
+    var lastIndex = HAPPY_PATH.length - 1;
     var parts = HAPPY_PATH.map(function (step, i) {
       var completed = activeIndex >= 0 && i <= activeIndex;
-      var current = i === activeIndex && !isError;
+      // Terminal step (shipped) reads as completed, never in-progress/current.
+      var current = i === activeIndex && !isError && i < lastIndex;
       var cls = 'node' + (completed ? ' completed' : '') + (current ? ' current' : '');
       return nodeHtml(label(step), cls, times[step]);
     });
@@ -268,13 +277,21 @@ const CLIENT_JS = `
       ')</summary><ul>' + rows.join('') + '</ul></details>';
   }
 
+  function actionsHtml(item) {
+    var id = esc(item.id);
+    return '<div class="item-actions">' +
+      '<button class="btn action-btn" data-action="reship" data-item="' + id + '">Re-ship</button>' +
+      '<button class="btn critical action-btn" data-action="cancel" data-item="' + id + '">Cancel</button>' +
+      '</div>';
+  }
+
   function itemCardHtml(item, evts) {
     return '<div class="card item"><div class="item-head"><div>' +
       '<div class="item-name">' + esc(item.product_name) + '</div>' +
       '<div class="muted">SKU: ' + esc(item.sku || '—') + ' × ' + esc(item.quantity) +
       '</div></div><span class="pill ' + toneOf(item.status) + '">' +
       esc(label(item.status)) + '</span></div>' +
-      stepperHtml(item, evts) + eventLogHtml(evts) + '</div>';
+      stepperHtml(item, evts) + actionsHtml(item) + eventLogHtml(evts) + '</div>';
   }
 
   function setContent(html) { document.getElementById('content').innerHTML = html; }
@@ -310,6 +327,45 @@ const CLIENT_JS = `
       esc(orderNumber) + '…</div>');
   }
 
+  function notify(message, isError) {
+    if (typeof shopify !== 'undefined' && shopify.toast && shopify.toast.show) {
+      shopify.toast.show(message, isError ? { isError: true } : undefined);
+    } else if (isError) {
+      window.alert(message);
+    }
+  }
+
+  // Re-ship / cancel a line item — same contract as the order-details block
+  // (POST { item_id } with a session token). Cross-origin to the functions host,
+  // so reship/cancel CORS must also allow this origin (.block.wms.dev).
+  async function doAction(action, itemId, btn) {
+    if (action === 'cancel' && !window.confirm('Cancel this line item? This cannot be undone.')) return;
+    var endpoint = action === 'reship' ? '/reship' : '/cancel';
+    var doneLabel = action === 'reship' ? 'Re-ship requested' : 'Cancellation requested';
+    var busyLabel = action === 'reship' ? 'Re-shipping…' : 'Cancelling…';
+    var original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = busyLabel;
+    try {
+      var token = await shopify.idToken();
+      var res = await fetch(FUNCTIONS_BASE + endpoint, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId })
+      });
+      if (!res.ok) {
+        var text = await res.text();
+        throw new Error('Backend error ' + res.status + ': ' + text);
+      }
+      btn.textContent = doneLabel; // resolved — leave disabled
+      notify(doneLabel);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = original;
+      notify((err && err.message) || 'Request failed.', true);
+    }
+  }
+
   async function main() {
     var params = new URLSearchParams(window.location.search);
     var orderNumber = params.get('order_number');
@@ -338,6 +394,13 @@ const CLIENT_JS = `
       renderError(orderNumber, (err && err.message) || 'Failed to load item history.');
     }
   }
+
+  // Delegated so it survives the innerHTML re-render in setContent().
+  document.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.action-btn') : null;
+    if (!btn || btn.disabled) return;
+    doAction(btn.getAttribute('data-action'), btn.getAttribute('data-item'), btn);
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', main);

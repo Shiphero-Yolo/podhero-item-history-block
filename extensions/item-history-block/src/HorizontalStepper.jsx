@@ -54,9 +54,12 @@ export default function HorizontalStepper({ currentStatus, events, createdAt, st
   const isError = ERROR_STATUSES.has(currentStatus);
   const activeIndex = HAPPY_PATH.indexOf(currentStatus);
 
+  const lastIndex = HAPPY_PATH.length - 1;
   const steps = HAPPY_PATH.map((step, i) => {
     const isCompleted = activeIndex >= 0 && i <= activeIndex;
-    const isCurrent = i === activeIndex && !isError;
+    // The terminal step (shipped) is an end state, not work-in-progress: once
+    // reached it reads as completed (green), never "current" (blue).
+    const isCurrent = i === activeIndex && !isError && i < lastIndex;
     let badgeTone = 'neutral';
     if (isCurrent) badgeTone = 'info';
     else if (isCompleted) badgeTone = 'success';
