@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from 'preact';
-import { HAPPY_PATH, ERROR_STATUSES, formatLabel } from './statusBadge.js';
+import { HAPPY_PATH, ERROR_STATUSES, EVENT_TO_STEP, formatLabel } from './statusBadge.js';
 
 const STATUS_ICONS = {
   new: 'clock',
@@ -26,11 +26,30 @@ function formatTimestamp(ts) {
   };
 }
 
-export default function HorizontalStepper({ currentStatus, events }) {
+export default function HorizontalStepper({ currentStatus, events, createdAt, stepTimestamps }) {
+  // Translate raw warehouse event names to canonical steps (see EVENT_TO_STEP),
+  // keeping the earliest timestamp per step — the moment the step was first
+  // reached. Events with no mapping are ignored.
   const eventTimestamps = {};
   (events || []).forEach((evt) => {
-    eventTimestamps[evt.event] = evt.timestamp;
+    const step = EVENT_TO_STEP[evt.event];
+    if (!step) return;
+    if (!eventTimestamps[step] || new Date(evt.timestamp) < new Date(eventTimestamps[step])) {
+      eventTimestamps[step] = evt.timestamp;
+    }
   });
+  // batched/decorated come from production_items (surfaced by order-history as
+  // step_timestamps), not from order_events. Only fill steps an event didn't.
+  if (stepTimestamps) {
+    Object.entries(stepTimestamps).forEach(([step, ts]) => {
+      if (ts && !eventTimestamps[step]) eventTimestamps[step] = ts;
+    });
+  }
+  // No event stamps the first step, so fall back to the line item's creation
+  // time as a proxy for when it entered the pipeline ("new").
+  if (createdAt && !eventTimestamps.new) {
+    eventTimestamps.new = createdAt;
+  }
 
   const isError = ERROR_STATUSES.has(currentStatus);
   const activeIndex = HAPPY_PATH.indexOf(currentStatus);
@@ -46,7 +65,10 @@ export default function HorizontalStepper({ currentStatus, events }) {
       key: step,
       icon: STATUS_ICONS[step] || 'circle',
       label: formatLabel(step),
-      timestamp: isCompleted ? formatTimestamp(eventTimestamps[step]) : { date: '\u2014', time: '' },
+      // Show a timestamp wherever we have real evidence the step happened
+      // (a mapped event, or createdAt for "new"), independent of the green
+      // "completed" coloring. Steps with no data render an em dash.
+      timestamp: formatTimestamp(eventTimestamps[step]),
       badgeTone,
       isCurrent,
       isCompleted,

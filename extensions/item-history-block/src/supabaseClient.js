@@ -35,3 +35,10 @@ export async function reshipItem(itemId) {
     body: JSON.stringify({ item_id: itemId }),
   });
 }
+
+export async function cancelItem(itemId) {
+  return authedFetch('/cancel', {
+    method: 'POST',
+    body: JSON.stringify({ item_id: itemId }),
+  });
+}

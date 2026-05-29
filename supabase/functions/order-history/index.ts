@@ -5,6 +5,29 @@ import { getAccountIdForShop } from '../_shared/account.ts';
 import { createAdminClient } from '../_shared/supabase.ts';
 import { internalError, jsonResponse } from '../_shared/http.ts';
 
+// batched_at / decorated_at live on production_items (one row per unit), not on
+// order_items. We fold a line item's units down to the earliest time it reached
+// each step — i.e. when the line first got batched / decorated.
+type ProductionStep = { batched: string | null; decorated: string | null };
+type ProductionRow = { order_item_id: string; batched_at: string | null; decorated_at: string | null };
+
+function earliest(a: string | null, b: string | null): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return new Date(a) <= new Date(b) ? a : b;
+}
+
+function foldProductionSteps(rows: ProductionRow[]): Record<string, ProductionStep> {
+  const byItem: Record<string, ProductionStep> = {};
+  for (const r of rows) {
+    const cur = byItem[r.order_item_id] ?? { batched: null, decorated: null };
+    cur.batched = earliest(cur.batched, r.batched_at);
+    cur.decorated = earliest(cur.decorated, r.decorated_at);
+    byItem[r.order_item_id] = cur;
+  }
+  return byItem;
+}
+
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
@@ -43,7 +66,27 @@ Deno.serve(async (req: Request) => {
     if (itemsRes.error) throw itemsRes.error;
     if (eventsRes.error) throw eventsRes.error;
 
-    return jsonResponse(req, 200, { items: itemsRes.data, events: eventsRes.data });
+    const items = itemsRes.data ?? [];
+    const itemIds = items.map((i) => i.id);
+
+    // production_items has no account_id of its own; scoping holds because
+    // itemIds were already filtered by account_id above.
+    let stepsByItem: Record<string, ProductionStep> = {};
+    if (itemIds.length > 0) {
+      const prodRes = await supabase
+        .from('production_items')
+        .select('order_item_id, batched_at, decorated_at')
+        .in('order_item_id', itemIds);
+      if (prodRes.error) throw prodRes.error;
+      stepsByItem = foldProductionSteps((prodRes.data ?? []) as ProductionRow[]);
+    }
+
+    const itemsWithSteps = items.map((item) => ({
+      ...item,
+      step_timestamps: stepsByItem[item.id] ?? { batched: null, decorated: null },
+    }));
+
+    return jsonResponse(req, 200, { items: itemsWithSteps, events: eventsRes.data });
   } catch (err) {
     return internalError(req, 'order-history', err);
   }
