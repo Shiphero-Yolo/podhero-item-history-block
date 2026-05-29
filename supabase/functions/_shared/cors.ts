@@ -10,7 +10,10 @@ function isAllowedOrigin(origin: string | null): boolean {
   if (ALLOWED_ORIGINS.has(origin)) return true;
   try {
     const { hostname } = new URL(origin);
-    return hostname.endsWith('.myshopify.com');
+    // .myshopify.com — the shop admin iframe; .block.wms.dev — the embedded
+    // app-home iframe (application_url), which calls order-history from the
+    // full-history page.
+    return hostname.endsWith('.myshopify.com') || hostname.endsWith('.block.wms.dev');
   } catch {
     return false;
   }
