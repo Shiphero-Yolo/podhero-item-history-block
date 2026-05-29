@@ -3,141 +3,598 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="shopify-api-key" content="d2922a99be8c4ac800ca4f9c581dc08b" />
+<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
 <title>PODHero · Item History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --purple: #5B2C91;
-    --coral: #FF4D6D;
-    --yellow: #FFD93D;
-    --navy: #1B1B3A;
-    --gray-bg: #F4F4F8;
-    --gray-text: #5C5C7A;
+    --brand: #7861CC;
+    --brand-dark: #5E4C9E;
+    --brand-soft: #EFEBFF;
+    --brand-light: #D8D1F2;
+
+    --bg-canvas: #F7F9F6;
+    --bg-surface: #ffffff;
+    --bg-sunken: #F3F3F3;
+
+    --fg-primary: #3D423B;
+    --fg-secondary: #5C605B;
+    --fg-muted: #6E746C;
+    --fg-placeholder: #99A096;
+    --fg-inverse: #ffffff;
+
+    --line-subtle: #E4E7E2;
+    --line-default: #CBD2C7;
+
+    --status-danger-bg: #FFF5F5;
+    --status-danger-fg: #AA2525;
+    --status-danger-strong: #CE484A;
+    --status-success-bg: #ECFCF3;
+    --status-success-fg: #24834E;
+    --status-success-strong: #32B76C;
+    --status-info-bg: #EFEBFF;
+    --status-info-fg: #5E4C9E;
   }
   * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
   body {
-    margin: 0; padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-    background: var(--gray-bg);
-    color: var(--navy);
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+                 BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-canvas);
+    color: var(--fg-primary);
     -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 20px;
+    visibility: hidden;
   }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 24px 64px; }
+  .wrap { max-width: 1024px; margin: 0 auto; padding: 24px 24px 64px; }
+
   .hero {
-    background: var(--purple); color: #fff;
-    padding: 32px; border-radius: 14px;
-    position: relative; overflow: hidden;
+    background: var(--brand-dark);
+    color: var(--fg-inverse);
+    padding: 24px 28px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    box-shadow: 0 1px 2px rgba(45, 50, 43, 0.06);
   }
-  .hero::after {
-    content: ""; position: absolute; right: -40px; top: -40px;
-    width: 140px; height: 140px; border-radius: 50%;
-    background: var(--yellow); opacity: 0.9;
+  .hero-brand { display: flex; align-items: center; gap: 16px; }
+  .hero-logo { height: 40px; width: auto; display: block; }
+  .hero-divider { width: 1px; height: 32px; background: rgba(255,255,255,0.25); }
+  .hero-title {
+    font-size: 18px; line-height: 24px; font-weight: 600;
+    margin: 0; letter-spacing: -0.01em;
   }
-  .hero::before {
-    content: ""; position: absolute; left: -10%; bottom: -30px;
-    width: 120%; height: 30px; transform: rotate(-3deg);
-    background: var(--coral);
+  .hero-sub {
+    font-size: 12px; line-height: 16px; margin: 2px 0 0;
+    color: rgba(255,255,255,0.78);
   }
-  .badge {
-    display: inline-block; background: var(--yellow); color: var(--purple);
-    padding: 6px 14px; border-radius: 8px;
-    font-weight: 700; font-size: 14px; letter-spacing: 0.3px;
-    margin-bottom: 18px; position: relative; z-index: 1;
-  }
-  h1 { margin: 0 0 6px; font-size: 30px; line-height: 1.15; position: relative; z-index: 1; }
-  .tagline { color: var(--yellow); margin: 0; font-size: 16px; position: relative; z-index: 1; }
+  .hero-meta { text-align: right; font-size: 12px; line-height: 16px; }
+  .hero-meta .order { font-weight: 600; font-size: 14px; line-height: 20px; color: #fff; }
+  .hero-meta .ver { color: rgba(255,255,255,0.65); font-variant-numeric: tabular-nums; }
 
-  .card {
-    background: #fff; padding: 24px 28px; border-radius: 12px;
-    margin-top: 18px; border-left: 4px solid var(--coral);
-    box-shadow: 0 1px 2px rgba(27,27,58,0.04);
+  .summary {
+    display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+    margin-top: 16px; padding: 14px 18px;
+    background: var(--bg-surface);
+    border: 1px solid var(--line-subtle);
+    border-radius: 10px;
+    font-size: 13px; color: var(--fg-secondary);
   }
-  .card.tip { border-left-color: var(--purple); background: #FFF8DC; }
-  .card h2 { margin: 0 0 8px; color: var(--purple); font-size: 18px; }
-  .card p { margin: 0 0 8px; line-height: 1.55; }
-  .card p:last-child { margin-bottom: 0; }
-  .muted { color: var(--gray-text); font-size: 14px; }
+  .summary .stat strong { color: var(--fg-primary); font-weight: 600; margin-right: 4px; }
+  .summary .divider { width: 1px; height: 16px; background: var(--line-subtle); }
 
-  .pipeline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 18px 0 4px; }
-  .stage {
-    background: var(--purple); color: #fff;
-    padding: 7px 12px; border-radius: 6px;
-    font-size: 12px; font-weight: 600;
-    white-space: nowrap;
+  .empty, .error, .loading {
+    background: var(--bg-surface); padding: 32px; border-radius: 12px;
+    margin-top: 16px; text-align: center;
+    border: 1px solid var(--line-subtle);
   }
-  .arrow { color: var(--purple); font-size: 18px; line-height: 1; }
+  .empty h2, .error h2 { margin: 0 0 8px; color: var(--brand-dark); font-size: 16px; }
+  .error h2 { color: var(--status-danger-fg); }
+  .empty p, .error p { margin: 0; color: var(--fg-muted); }
+  .loading { color: var(--fg-muted); }
 
-  .steps { padding-left: 0; list-style: none; counter-reset: step; }
-  .steps li {
-    counter-increment: step;
-    position: relative; padding: 4px 0 4px 36px;
-    line-height: 1.5;
+  .items { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .item {
+    background: var(--bg-surface);
+    border: 1px solid var(--line-subtle);
+    border-left: 3px solid var(--brand);
+    border-radius: 10px;
+    overflow: hidden;
   }
-  .steps li::before {
-    content: counter(step);
-    position: absolute; left: 0; top: 4px;
-    width: 24px; height: 24px; border-radius: 50%;
-    background: var(--purple); color: #fff;
-    font-size: 12px; font-weight: 700;
+  .item.is-error { border-left-color: var(--status-danger-strong); }
+  .item.is-success { border-left-color: var(--status-success-strong); }
+
+  .item-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 14px 18px; cursor: pointer; user-select: none;
+  }
+  .item-head-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .item-name { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--fg-primary); }
+  .item-sub {
+    color: var(--fg-muted); font-size: 12px; line-height: 16px;
+    margin-top: 2px; font-variant-numeric: tabular-nums;
+  }
+  .chevron {
+    width: 14px; height: 14px; color: var(--fg-muted);
+    transition: transform 0.18s ease; flex-shrink: 0;
+  }
+  .item.is-open .chevron { transform: rotate(180deg); }
+  .status-pill {
+    display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap;
+  }
+  .status-pill.tone-info { background: var(--status-info-bg); color: var(--status-info-fg); }
+  .status-pill.tone-success { background: var(--status-success-bg); color: var(--status-success-fg); }
+  .status-pill.tone-critical { background: var(--status-danger-bg); color: var(--status-danger-fg); }
+  .status-pill.tone-neutral { background: var(--bg-sunken); color: var(--fg-secondary); }
+
+  .item-body { padding: 0 18px 18px; border-top: 1px solid var(--line-subtle); display: none; }
+  .item.is-open .item-body { display: block; }
+
+  .stepper {
+    display: grid;
+    padding: 16px 4px 0;
+  }
+  .stepper-cell {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    min-width: 0; gap: 6px;
+  }
+  .stepper-icon-wrap {
+    position: relative; width: 100%;
     display: flex; align-items: center; justify-content: center;
   }
+  .stepper-icon {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1.5px solid var(--line-default);
+    background: var(--bg-surface);
+    color: var(--fg-placeholder);
+    font-size: 12px; font-weight: 700; line-height: 1; flex-shrink: 0;
+  }
+  .stepper-icon.is-completed {
+    background: var(--status-success-bg);
+    border-color: var(--status-success-fg);
+    color: var(--status-success-fg);
+  }
+  .stepper-icon.is-current {
+    background: var(--status-info-bg);
+    border-color: var(--status-info-fg);
+    color: var(--status-info-fg);
+    box-shadow: 0 0 0 4px rgba(94, 76, 158, 0.12);
+  }
+  .stepper-icon.is-error {
+    background: var(--status-danger-bg);
+    border-color: var(--status-danger-fg);
+    color: var(--status-danger-fg);
+  }
+  .stepper-line {
+    position: absolute; top: 50%;
+    left: calc(50% + 16px); right: calc(-50% + 16px);
+    height: 1.5px; background: var(--line-subtle);
+    transform: translateY(-50%); z-index: 0;
+  }
+  .stepper-line.is-completed { background: var(--status-success-fg); }
+  .stepper-line.is-error { background: var(--status-danger-fg); }
+  .stepper-label { font-size: 11px; line-height: 14px; color: var(--fg-muted); font-weight: 500; white-space: nowrap; }
+  .stepper-label.is-current { color: var(--fg-primary); font-weight: 600; }
+  .stepper-label.is-error { color: var(--status-danger-fg); font-weight: 600; }
+  .stepper-ts { font-size: 10px; line-height: 13px; color: var(--fg-placeholder); font-variant-numeric: tabular-nums; text-align: center; }
+  .stepper-ts-time { display: block; }
 
-  footer { color: var(--gray-text); font-size: 12px; margin-top: 24px; text-align: center; }
+  .item-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .act-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line-default); background: var(--bg-surface); color: var(--fg-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .act-btn:hover:not(:disabled) { background: var(--bg-sunken); }
+  .act-btn:disabled { opacity: 0.55; cursor: default; }
+  .act-btn.critical { color: var(--status-danger-fg); border-color: #F0C2C2; }
+  .act-btn.critical:hover:not(:disabled) { background: var(--status-danger-bg); }
 
-  /* Standalone (non-iframe) visitors get nothing.
-     The Shopify Admin iframe will reveal the content via the script below. */
-  body { visibility: hidden; }
+  footer { color: var(--fg-muted); font-size: 12px; margin-top: 28px; text-align: center; }
+
+  @media (max-width: 540px) {
+    .hero { flex-direction: column; align-items: flex-start; gap: 14px; }
+    .hero-meta { text-align: left; }
+    .item-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+  }
 </style>
 </head>
 <body>
-  <script>
-    // Reveal content only when this page is loaded inside an iframe (i.e. Shopify Admin).
-    if (window.top !== window.self) {
-      document.documentElement.style.visibility = 'visible';
-      document.body.style.visibility = 'visible';
-    }
-  </script>
-  <div class="wrap">
-    <div class="hero">
-      <span class="badge">PODHero</span>
-      <h1>Item History</h1>
-      <p class="tagline">Track every order. Every step. Every time.</p>
-    </div>
+<script>
+  if (window.top !== window.self) {
+    document.documentElement.style.visibility = 'visible';
+    document.body.style.visibility = 'visible';
+  }
+</script>
 
-    <div class="card">
-      <h2>You're all set.</h2>
-      <p>The Item History block has been added to your store's order detail pages — there's nothing to configure here.</p>
-      <p class="muted">Open any order from <strong>Orders</strong> in the sidebar and scroll down to see the full lifecycle for every item on that order.</p>
-    </div>
-
-    <div class="card">
-      <h2>What you'll see</h2>
-      <div class="pipeline">
-        <span class="stage">New</span><span class="arrow">›</span>
-        <span class="stage">Batched</span><span class="arrow">›</span>
-        <span class="stage">Treated</span><span class="arrow">›</span>
-        <span class="stage">Decorated</span><span class="arrow">›</span>
-        <span class="stage">QC Pass</span><span class="arrow">›</span>
-        <span class="stage">Binned</span><span class="arrow">›</span>
-        <span class="stage">Shipped</span>
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-brand">
+      <img src="podhero-logo.png" alt="PODHero" class="hero-logo" />
+      <div class="hero-divider"></div>
+      <div>
+        <h1 class="hero-title">Item History</h1>
+        <p class="hero-sub">Track every order. Every step. Every time.</p>
       </div>
-      <p class="muted">Each step shows the date and time it was reached. Errors (QC Fail, API Fail, Inventory Fail, Cancelled) appear as a red branch off the timeline.</p>
     </div>
-
-    <div class="card">
-      <h2>How to use it</h2>
-      <ol class="steps">
-        <li>Go to <strong>Orders</strong> and open any order.</li>
-        <li>Scroll down to the <strong>Item History</strong> section.</li>
-        <li>Click <strong>Re-ship</strong> on any item that needs to be made again.</li>
-      </ol>
+    <div class="hero-meta">
+      <div class="order" id="order-label">—</div>
+      <div class="ver">v1.3.0</div>
     </div>
+  </header>
 
-    <div class="card tip">
-      <h2>Need a hand?</h2>
-      <p>Reach out to your PODHero point of contact with the Shopify order number — that's the fastest way to get help.</p>
-    </div>
+  <div id="summary" class="summary" hidden></div>
+  <div id="content"></div>
 
-    <footer>© PODHero · Item History v1</footer>
-  </div>
+  <footer>© PODHero · Item History v1.3.0</footer>
+</div>
+
+<script>
+  const FUNCTIONS_BASE = 'https://qcjiezsjuhpsxcyiduaf.supabase.co/functions/v1';
+
+  const HAPPY_PATH = ['new','batched','treated','decorated','qc_pass','binned','shipped'];
+  const ERROR_STATUSES = new Set(['qc_fail','api_fail','inventory_fail','cancelled']);
+  const SUCCESS_STATUSES = new Set(['shipped','binned','qc_pass']);
+  const INFO_STATUSES = new Set(['new','batched','treated','decorated']);
+  const STATUS_EVENT_MAP = {
+    new: 'order_ingested',
+    batched: 'line_items_processed',
+    binned: 'item_binned',
+  };
+  const STATUS_PRODUCTION_FIELD = {
+    batched: 'batched_at',
+    decorated: 'decorated_at',
+    binned: 'binned_at',
+    shipped: 'shipped_at',
+    cancelled: 'cancelled_at',
+  };
+  function tsForStatus(eventTimestamps, productionTimestamps, status) {
+    const prodField = STATUS_PRODUCTION_FIELD[status];
+    if (prodField && productionTimestamps && productionTimestamps[prodField]) {
+      return productionTimestamps[prodField];
+    }
+    return eventTimestamps[STATUS_EVENT_MAP[status] || status];
+  }
+
+  function el(tag, props, children) {
+    const node = document.createElement(tag);
+    if (props) {
+      for (const [k, v] of Object.entries(props)) {
+        if (v == null || v === false) continue;
+        if (k === 'class') node.className = v;
+        else if (k === 'text') node.textContent = v;
+        else if (k === 'style') node.setAttribute('style', v);
+        else if (k.startsWith('on') && typeof v === 'function') {
+          node.addEventListener(k.slice(2).toLowerCase(), v);
+        } else {
+          node.setAttribute(k, v);
+        }
+      }
+    }
+    if (children) {
+      for (const c of children) {
+        if (c == null || c === false) continue;
+        node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      }
+    }
+    return node;
+  }
+
+  function clear(parent) {
+    while (parent.firstChild) parent.removeChild(parent.firstChild);
+  }
+
+  function formatLabel(status) {
+    return String(status || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+  function statusTone(status) {
+    if (ERROR_STATUSES.has(status)) return 'critical';
+    if (SUCCESS_STATUSES.has(status)) return 'success';
+    if (INFO_STATUSES.has(status)) return 'info';
+    return 'neutral';
+  }
+  function fmtDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  function fmtTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function getOrderNumber() {
+    const params = new URLSearchParams(window.location.search);
+    const raw = (params.get('order_number') || params.get('order_id') || '').trim();
+    if (!raw || raw.length > 64) return null;
+    return raw;
+  }
+
+  function setMeta(orderNumber) {
+    document.getElementById('order-label').textContent =
+      orderNumber ? `Order ${orderNumber}` : 'No order selected';
+  }
+
+  function renderEmpty() {
+    const c = document.getElementById('content');
+    clear(c);
+    c.appendChild(el('div', { class: 'empty' }, [
+      el('h2', { text: 'No order selected' }),
+      el('p', null, [
+        'Open an order from ',
+        el('strong', { text: 'Orders' }),
+        ' in the sidebar and use the ',
+        el('strong', { text: 'Open full history' }),
+        ' button in the Item History block.',
+      ]),
+    ]));
+  }
+  function renderLoading() {
+    const c = document.getElementById('content');
+    clear(c);
+    c.appendChild(el('div', { class: 'loading', text: 'Loading item history…' }));
+  }
+  function renderError(message) {
+    const c = document.getElementById('content');
+    clear(c);
+    c.appendChild(el('div', { class: 'error' }, [
+      el('h2', { text: 'Could not load' }),
+      el('p', { text: message }),
+    ]));
+  }
+
+  function renderSummary(items) {
+    const summaryEl = document.getElementById('summary');
+    clear(summaryEl);
+    summaryEl.hidden = false;
+    const total = items.length;
+    const errored = items.filter(i => ERROR_STATUSES.has(i.status)).length;
+    const shipped = items.filter(i => i.status === 'shipped').length;
+
+    summaryEl.appendChild(el('div', { class: 'stat' }, [el('strong', { text: String(total) }), 'items']));
+    summaryEl.appendChild(el('div', { class: 'divider' }));
+    summaryEl.appendChild(el('div', { class: 'stat' }, [el('strong', { text: String(errored) }), 'in error']));
+    summaryEl.appendChild(el('div', { class: 'divider' }));
+    summaryEl.appendChild(el('div', { class: 'stat' }, [el('strong', { text: String(shipped) }), 'shipped']));
+  }
+
+  function buildStepper(item, itemEvents) {
+    // Map event name -> earliest timestamp (events come back sorted ASC).
+    const ts = {};
+    for (const ev of itemEvents || []) {
+      if (ev && ev.event && ts[ev.event] === undefined) ts[ev.event] = ev.timestamp;
+    }
+
+    const isError = ERROR_STATUSES.has(item.status);
+    const activeIndex = HAPPY_PATH.indexOf(item.status);
+    const prod = item.production_timestamps;
+
+    const steps = HAPPY_PATH.map((step, i) => ({
+      key: step,
+      label: formatLabel(step),
+      timestamp: (activeIndex >= 0 && i <= activeIndex) ? tsForStatus(ts, prod, step) : null,
+      isCompleted: activeIndex >= 0 && i <= activeIndex,
+      // Terminal step (shipped) is an end state — completed (green), not current (blue).
+      isCurrent: i === activeIndex && !isError && i < HAPPY_PATH.length - 1,
+    }));
+
+    if (isError) {
+      steps.push({
+        key: item.status,
+        label: formatLabel(item.status),
+        timestamp: tsForStatus(ts, prod, item.status),
+        isCompleted: false,
+        isCurrent: false,
+        isError: true,
+      });
+    }
+
+    const stepper = el('div', {
+      class: 'stepper',
+      style: `grid-template-columns: repeat(${steps.length}, minmax(0, 1fr));`,
+    });
+
+    steps.forEach((step, i) => {
+      const iconClasses = ['stepper-icon'];
+      let iconText = String(i + 1);
+      if (step.isError) { iconClasses.push('is-error'); iconText = '!'; }
+      else if (step.isCurrent) { iconClasses.push('is-current'); iconText = '✓'; }
+      else if (step.isCompleted) { iconClasses.push('is-completed'); iconText = '✓'; }
+
+      const wrapChildren = [el('div', { class: iconClasses.join(' '), text: iconText })];
+      if (i < steps.length - 1) {
+        const next = steps[i + 1];
+        const lineClasses = ['stepper-line'];
+        if (next.isError) lineClasses.push('is-error');
+        else if (step.isCompleted) lineClasses.push('is-completed');
+        wrapChildren.push(el('span', { class: lineClasses.join(' ') }));
+      }
+
+      const labelClasses = ['stepper-label'];
+      if (step.isError) labelClasses.push('is-error');
+      else if (step.isCurrent) labelClasses.push('is-current');
+
+      const date = fmtDate(step.timestamp);
+      const time = fmtTime(step.timestamp);
+
+      stepper.appendChild(el('div', { class: 'stepper-cell' }, [
+        el('div', { class: 'stepper-icon-wrap' }, wrapChildren),
+        el('span', { class: labelClasses.join(' '), text: step.label }),
+        el('span', { class: 'stepper-ts' }, [
+          date || '—',
+          time ? el('span', { class: 'stepper-ts-time', text: time }) : null,
+        ]),
+      ]));
+    });
+
+    return stepper;
+  }
+
+  function chevronSvg() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('class', 'chevron');
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    const poly = document.createElementNS(ns, 'polyline');
+    poly.setAttribute('points', '4,6 8,10 12,6');
+    svg.appendChild(poly);
+    return svg;
+  }
+
+  function notify(message, isError) {
+    if (window.shopify && window.shopify.toast && window.shopify.toast.show) {
+      window.shopify.toast.show(message, isError ? { isError: true } : undefined);
+    } else if (isError) {
+      window.alert(message);
+    }
+  }
+
+  // Re-ship / cancel a line item (POST { item_id } with a session token) — same
+  // contract as the order-details block. CORS for this origin is enabled on the
+  // reship/cancel functions.
+  async function doAction(action, itemId, btn) {
+    if (action === 'cancel' && !window.confirm('Cancel this line item? This cannot be undone.')) return;
+    const endpoint = action === 'reship' ? '/reship' : '/cancel';
+    const doneLabel = action === 'reship' ? 'Re-ship requested' : 'Cancellation requested';
+    const busyLabel = action === 'reship' ? 'Re-shipping…' : 'Cancelling…';
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = busyLabel;
+    try {
+      const token = await window.shopify.idToken();
+      const res = await fetch(`${FUNCTIONS_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Backend error ${res.status}: ${text}`);
+      }
+      btn.textContent = doneLabel; // resolved — leave disabled
+      notify(doneLabel);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = original;
+      notify(err.message || 'Request failed.', true);
+    }
+  }
+
+  function actionsRow(item) {
+    return el('div', { class: 'item-actions' }, [
+      el('button', {
+        class: 'act-btn', type: 'button',
+        onClick: (e) => { e.stopPropagation(); doAction('reship', item.id, e.currentTarget); },
+      }, ['Re-ship']),
+      el('button', {
+        class: 'act-btn critical', type: 'button',
+        onClick: (e) => { e.stopPropagation(); doAction('cancel', item.id, e.currentTarget); },
+      }, ['Cancel']),
+    ]);
+  }
+
+  function renderItem(item, itemEvents) {
+    const tone = statusTone(item.status);
+    const itemClasses = ['item', 'is-open'];
+    if (tone === 'critical') itemClasses.push('is-error');
+    else if (tone === 'success') itemClasses.push('is-success');
+
+    const itemNode = el('article', { class: itemClasses.join(' ') }, [
+      el('div', {
+        class: 'item-head',
+        onClick: () => itemNode.classList.toggle('is-open'),
+      }, [
+        el('div', null, [
+          el('div', { class: 'item-name', text: item.product_name || 'Unnamed item' }),
+          el('div', { class: 'item-sub' }, [
+            'SKU: ', item.sku || '—', ' · Qty ', String(item.quantity ?? 1),
+          ]),
+        ]),
+        el('div', { class: 'item-head-right' }, [
+          el('span', { class: 'status-pill tone-' + tone, text: formatLabel(item.status) }),
+          chevronSvg(),
+        ]),
+      ]),
+      el('div', { class: 'item-body' }, [buildStepper(item, itemEvents), actionsRow(item)]),
+    ]);
+    return itemNode;
+  }
+
+  function renderResults(items, events) {
+    renderSummary(items);
+    const c = document.getElementById('content');
+    clear(c);
+
+    if (items.length === 0) {
+      c.appendChild(el('div', { class: 'empty' }, [
+        el('h2', { text: 'No history' }),
+        el('p', { text: 'This order has no items recorded in PODHero yet.' }),
+      ]));
+      return;
+    }
+
+    const eventsByItem = new Map();
+    for (const item of items) eventsByItem.set(item.id, []);
+    for (const ev of events || []) {
+      if (ev.order_item && eventsByItem.has(ev.order_item)) {
+        eventsByItem.get(ev.order_item).push(ev);
+        continue;
+      }
+      if (!ev.order_id) continue;
+      for (const item of items) {
+        if (item.order_id === ev.order_id) eventsByItem.get(item.id).push(ev);
+      }
+    }
+
+    const list = el('div', { class: 'items' });
+    for (const item of items) list.appendChild(renderItem(item, eventsByItem.get(item.id)));
+    c.appendChild(list);
+  }
+
+  async function load() {
+    const orderNumber = getOrderNumber();
+    setMeta(orderNumber);
+    if (!orderNumber) { renderEmpty(); return; }
+
+    renderLoading();
+    try {
+      if (typeof window.shopify === 'undefined' || !window.shopify.idToken) {
+        throw new Error('App Bridge not initialized. Open this page from inside Shopify Admin.');
+      }
+      const token = await window.shopify.idToken();
+      const res = await fetch(`${FUNCTIONS_BASE}/order-history?order_number=${encodeURIComponent(orderNumber)}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Backend error ${res.status}: ${text}`);
+      }
+      const { items, events } = await res.json();
+      renderResults(items || [], events || []);
+    } catch (err) {
+      renderError(err.message || 'Unknown error');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', load);
+  } else {
+    load();
+  }
+</script>
 </body>
 </html>
