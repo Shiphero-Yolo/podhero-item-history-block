@@ -41,32 +41,55 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, 403, { error: 'shop_not_provisioned' });
   }
 
+  // Accept either identifier:
+  //   order_number — the merchant-facing order name (order_items.order_number),
+  //                  sent by the extension after resolving the Shopify order name.
+  //   order_id     — PODHero's internal order id (order_items.order_id), which is
+  //                  also the only key on order_events.
+  // order_number wins when both are present. Both are all-digit text values.
   const url = new URL(req.url);
+  const orderNumber = url.searchParams.get('order_number');
   const orderId = url.searchParams.get('order_id');
-  if (!orderId || !/^\d+$/.test(orderId)) {
-    return jsonResponse(req, 400, { error: 'order_id must be a positive integer' });
+  const lookupValue = orderNumber ?? orderId;
+  const lookupColumn = orderNumber ? 'order_number' : 'order_id';
+  if (!lookupValue || !/^\d+$/.test(lookupValue)) {
+    return jsonResponse(req, 400, {
+      error: 'order_number or order_id must be a positive integer',
+    });
   }
 
   try {
     const supabase = createAdminClient();
-    const [itemsRes, eventsRes] = await Promise.all([
-      supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', orderId)
-        .eq('account_id', accountId),
-      supabase
+
+    const itemsRes = await supabase
+      .from('order_items')
+      .select('*')
+      .eq(lookupColumn, lookupValue)
+      .eq('account_id', accountId);
+    if (itemsRes.error) throw itemsRes.error;
+    const items = itemsRes.data ?? [];
+
+    // order_events is keyed by order_id only. When the caller passed order_id we
+    // query it directly (unchanged behaviour); when they passed order_number we
+    // resolve the order_id(s) from the matched items — 1:1 in practice, but `.in`
+    // stays correct if a number ever spans rows.
+    const eventOrderIds =
+      lookupColumn === 'order_id'
+        ? [lookupValue]
+        : [...new Set(items.map((i) => i.order_id).filter(Boolean))];
+
+    let events: unknown[] = [];
+    if (eventOrderIds.length > 0) {
+      const eventsRes = await supabase
         .from('order_events')
         .select('*')
-        .eq('order_id', orderId)
+        .in('order_id', eventOrderIds)
         .eq('account_id', accountId)
-        .order('timestamp', { ascending: true }),
-    ]);
+        .order('timestamp', { ascending: true });
+      if (eventsRes.error) throw eventsRes.error;
+      events = eventsRes.data ?? [];
+    }
 
-    if (itemsRes.error) throw itemsRes.error;
-    if (eventsRes.error) throw eventsRes.error;
-
-    const items = itemsRes.data ?? [];
     const itemIds = items.map((i) => i.id);
 
     // production_items has no account_id of its own; scoping holds because
@@ -86,7 +109,7 @@ Deno.serve(async (req: Request) => {
       step_timestamps: stepsByItem[item.id] ?? { batched: null, decorated: null },
     }));
 
-    return jsonResponse(req, 200, { items: itemsWithSteps, events: eventsRes.data });
+    return jsonResponse(req, 200, { items: itemsWithSteps, events });
   } catch (err) {
     return internalError(req, 'order-history', err);
   }
