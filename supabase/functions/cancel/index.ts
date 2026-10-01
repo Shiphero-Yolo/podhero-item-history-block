@@ -5,6 +5,9 @@ import { getAccountIdForShop } from '../_shared/account.ts';
 import { createAdminClient } from '../_shared/supabase.ts';
 import { internalError, jsonResponse } from '../_shared/http.ts';
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
@@ -30,24 +33,42 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, 400, { error: 'item_id is required' });
   }
 
+  // order_items.id is a uuid; a malformed id would fail the cast inside the
+  // RPC and surface as a 500.
+  if (!UUID_RE.test(itemId)) {
+    return jsonResponse(req, 404, { error: 'item_not_found' });
+  }
+
   try {
     const supabase = createAdminClient();
+
+    // enqueue_cancel_line_item(p_order_item_id) is not account-scoped, so
+    // confirm the line belongs to this shop's account before enqueueing.
+    const { data: item, error: itemError } = await supabase
+      .from('order_items')
+      .select('id')
+      .eq('id', itemId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (itemError) throw itemError;
+    if (!item) return jsonResponse(req, 404, { error: 'item_not_found' });
+
     const { data, error } = await supabase.rpc('enqueue_cancel_line_item', {
-      p_item_id: itemId,
-      p_account_id: accountId,
+      p_order_item_id: itemId,
     });
 
     if (error) throw error;
 
     const result = data as
-      | { success: true; item_id: string; previous_status: string | null }
+      | { success: true; message_id?: number; already_cancelled?: boolean }
       | { success: false; error: string };
 
     if (!result.success) {
       return jsonResponse(req, 404, { error: 'item_not_found' });
     }
 
-    return jsonResponse(req, 200, result);
+    return jsonResponse(req, 200, { ...result, item_id: itemId });
   } catch (err) {
     return internalError(req, 'cancel', err);
   }
