@@ -1,6 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx h */
 import { h } from 'preact';
+import { useState } from 'preact/hooks';
 import HorizontalStepper from './HorizontalStepper.jsx';
 import { statusBadge, ERROR_STATUSES } from './statusBadge.js';
 
@@ -16,6 +17,9 @@ export default function ItemRow({
 }) {
   const { label, tone } = statusBadge(item.status);
   const startsOpen = ERROR_STATUSES.has(item.status);
+  // Admin block extensions run sandboxed without window.confirm, so cancel
+  // confirms inline: the first click arms it, the second sends it.
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   function handleReshipClick(e) {
     // s-details toggles on click bubbling up from the summary; stop both
@@ -28,7 +32,20 @@ export default function ItemRow({
   function handleCancelClick(e) {
     e.stopPropagation();
     e.preventDefault();
+    setConfirmingCancel(true);
+  }
+
+  function handleConfirmCancelClick(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    setConfirmingCancel(false);
     onCancel(item.id);
+  }
+
+  function handleKeepClick(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    setConfirmingCancel(false);
   }
 
   return (
@@ -56,15 +73,31 @@ export default function ItemRow({
             >
               {reshipDone ? 'Re-ship requested' : 'Re-ship'}
             </s-button>
-            <s-button
-              variant="secondary"
-              tone="critical"
-              disabled={cancelDone}
-              loading={cancelLoading}
-              onClick={handleCancelClick}
-            >
-              {cancelDone ? 'Cancellation requested' : 'Cancel'}
-            </s-button>
+            {confirmingCancel ? (
+              <s-stack direction="inline" gap="small" alignItems="center">
+                <s-text tone="critical">Cancel this line? This can't be undone.</s-text>
+                <s-button
+                  variant="primary"
+                  tone="critical"
+                  onClick={handleConfirmCancelClick}
+                >
+                  Confirm cancel
+                </s-button>
+                <s-button variant="secondary" onClick={handleKeepClick}>
+                  Keep
+                </s-button>
+              </s-stack>
+            ) : (
+              <s-button
+                variant="secondary"
+                tone="critical"
+                disabled={cancelDone}
+                loading={cancelLoading}
+                onClick={handleCancelClick}
+              >
+                {cancelDone ? 'Cancellation requested' : 'Cancel'}
+              </s-button>
+            )}
           </s-stack>
         </s-stack>
       </s-summary>

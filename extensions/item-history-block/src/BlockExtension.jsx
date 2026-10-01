@@ -8,7 +8,7 @@ import { ERROR_STATUSES } from './statusBadge.js';
 
 // Surfaced as a small badge so we can tell which build a merchant is running
 // when debugging in the admin. Bump on each release.
-const VERSION = 'v1.3.0';
+const VERSION = 'v1.3.1';
 
 // DEV showcase override. The pod-hero-app dev store's own orders don't exist in
 // PODHero's data, so a live lookup there renders "No history found". Set this to
@@ -66,7 +66,6 @@ function Extension() {
   }
 
   async function handleCancel(itemId) {
-    if (!window.confirm('Cancel this line item? This cannot be undone.')) return;
     setCancelLoading((prev) => ({ ...prev, [itemId]: true }));
     try {
       await cancelItem(itemId);
